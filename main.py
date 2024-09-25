@@ -1,45 +1,34 @@
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
-from transformers import pipeline
-import os
+from translation_module.translation import translate
+from translation_module.synonyms import get_synonyms
 
-os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+def translate_with_synonyms(word, source_lang, target_lang):
+    translation = translate(word, source_lang, target_lang)
+    synonyms = get_synonyms(word)
+    return translation, synonyms[:4]  # Limit to 4 synonyms
 
-translator = pipeline('translation_en_to_de', model="Helsinki-NLP/opus-mt-en-de")
+def user_translation_choice():
+    print("Welcome to the Translation & Synonyms Generator!")
 
-synonym_generator = pipeline('text-generation', model="gpt2", max_length=200)
+    # Get source and target languages from user input
+    source_lang = input("Enter the source language code (e.g., 'en' for English, 'es' for Spanish): ").strip()
+    target_lang = input("Enter the target language code (e.g., 'es' for Spanish, 'fr' for French): ").strip()
 
-template = """
-Translate the following word from English to German: {word}.
-Then, generate 4 possible synonyms for the translated word.
-"""
+    # Choose to translate a single word or a long text
+    translation_type = input("Do you want to translate a 'word' or 'text'? (Type 'word' or 'text'): ").strip().lower()
 
-
-
-prompt = PromptTemplate(input_variables=["word"], template=template)
-
-def huggingface_translate(word):
-    translation = translator(word)[0]['translation_text']
+    if translation_type == 'word':
+        word = input("Enter the word to translate: ").strip()
+        translation, synonyms = translate_with_synonyms(word, source_lang, target_lang)
+        print(f"\nTranslation of '{word}' from {source_lang} to {target_lang}: {translation}")
+        print(f"Synonyms in source language: {synonyms}")
     
-    return translation
-
-def generate_synonyms(translation):
-    prompt_text = f"""
-    2 Synonyms of: {translation}."""
-    synonym = synonym_generator(prompt_text)[0]['generated_text']
-    return synonym
-
-
-def translate_and_generate_synonyms(word):
-    print(f"Translating '{word}' from English to German...")
-    translation = huggingface_translate(word)
-    print(f"Translation: {translation}")
+    elif translation_type == 'text':
+        text = input("Enter the text to translate: ").strip()
+        translated_text = translate(text, source_lang, target_lang)
+        print(f"\nTranslation from {source_lang} to {target_lang}: {translated_text}")
     
-    synonyms = generate_synonyms(translation)
-    return translation, synonyms
+    else:
+        print("Invalid choice. Please type 'word' or 'text'.")
 
-
-word = "fine"
-translation, synonyms = translate_and_generate_synonyms(word)
-print(f"Translation: {translation}")
-print(f"Synonym: {synonyms}")
+if __name__ == "__main__":
+    user_translation_choice()
